@@ -48,15 +48,15 @@
 
         /* Estilos para Modal de Login e Admin */
         .modal { display: none; position: fixed; z-index: 300; left: 0; top: 0; width: 100%; height: 100%; overflow: auto; background-color: rgba(0,0,0,0.7); padding-top: 60px; }
-        .modal-content { background-color: #2c2c2c; margin: 5% auto; padding: 20px; border: 1px solid #888; width: 80%; max-width: 650px; border-radius: 8px; color: #fff; } /* Max-width aumentado */
+        .modal-content { background-color: #2c2c2c; margin: 5% auto; padding: 20px; border: 1px solid #888; width: 80%; max-width: 650px; border-radius: 8px; color: #fff; }
         .modal-content h2 { text-align: center; color: gold; }
         .modal-content label { display: block; margin-top: 10px; }
         .modal-content input[type="text"], .modal-content input[type="password"], .modal-content textarea { width: calc(100% - 22px); padding: 10px; margin-top: 5px; margin-bottom: 15px; border: 1px solid #555; background-color: #333; color: #fff; border-radius: 4px; }
-        .modal-content textarea#jsonDataTextarea { height: 280px; font-family: monospace; font-size: 0.9em; white-space: pre; } /* Altura aumentada */
+        .modal-content textarea#jsonDataTextarea { height: 280px; font-family: monospace; font-size: 0.9em; white-space: pre; }
         .modal-content button { background-color: gold; color: #000; padding: 10px 15px; border: none; border-radius: 4px; cursor: pointer; font-size: 1em; margin-right: 10px; margin-top:5px; }
         .modal-content button:hover { background-color: #e6b800; }
         .modal-content .btn-close, .modal-content .btn-secondary { background-color: #555; color: #fff; }
-        .modal-content .btn-reset-default { background-color: #dc3545; color: #fff; } /* Botão de Reset */
+        .modal-content .btn-reset-default { background-color: #dc3545; color: #fff; }
         .modal-content .btn-reset-default:hover { background-color: #c82333; }
         .modal-content .btn-close:hover, .modal-content .btn-secondary:hover { background-color: #777; }
         #loginErrorMessage, #adminStatusMessage { color: #ff6b6b; text-align: center; margin-top: 10px; min-height:1.2em; }
@@ -85,8 +85,8 @@
     <div id="loginModal" class="modal">
         <div class="modal-content">
             <h2>Login Admin</h2>
-            <label for="username">Usuário:</label><input type="text" id="username" value="admin">
-            <label for="password">Senha:</label><input type="password" id="password" value="admin">
+            <label for="username">Usuário:</label><input type="text" id="username">
+            <label for="password">Senha:</label><input type="password" id="password">
             <button id="btnLogin">Entrar</button>
             <button id="btnCloseLoginModal" class="btn-close">Fechar</button>
             <p id="loginErrorMessage"></p>
@@ -111,10 +111,10 @@
                     <li>Clique em "<strong>Salvar Alterações (no Navegador)</strong>" para gravar os dados da caixa de texto no armazenamento local do seu navegador. Essas alterações persistirão ao reabrir a página neste navegador.</li>
                     <li>Clique em "<strong>Aplicar e Recarregar Lista</strong>" para salvar no navegador E atualizar a visualização das músicas no app.</li>
                     <li>Clique em "<strong>Baixar Backup JSON</strong>" para salvar os dados atuais (da caixa de texto) em um arquivo <code>bd_musicas.json</code> no seu computador, como um backup externo.</li>
-                    <li>Clique em "<strong>Restaurar Dados Padrão</strong>" para limpar quaisquer dados salvos no navegador e recarregar a lista original embutida no código HTML.</li>
+                    <li>Clique em "<strong>Restaurar Dados Padrão</strong>" para limpar quaisquer dados salvos no navegador e recarregar a lista original embutida no código HTML (da variável <code>embeddedCsvData</code>).</li>
                 </ol>
-                <strong>Para alterar os dados padrão do aplicativo (que carregam se o navegador estiver limpo):</strong>
-                <p>Você ainda precisa editar a variável <code>embeddedCsvData</code> diretamente no arquivo HTML e salvá-lo.</p>
+                <strong>Para alterar os dados padrão do aplicativo (que carregam se o navegador estiver limpo ou após restaurar):</strong>
+                <p>Você precisa editar a variável <code>embeddedCsvData</code> diretamente no arquivo HTML e salvá-lo. Cole sua lista de músicas em formato CSV dentro desta variável.</p>
             </div>
         </div>
     </div>
@@ -145,7 +145,10 @@
     </div>
 
     <script>
-        // Dados CSV padrão embutidos. Usados se não houver nada no LocalStorage ou se for resetado.
+        // !!!!! ATENÇÃO !!!!!
+        // Para definir SUA PRÓPRIA LISTA DE MÚSICAS PADRÃO:
+        // 1. Prepare sua lista em formato CSV (primeira linha é o cabeçalho: Numero,Arquivo,Cantor,Musica,TrechoInicial).
+        // 2. Substitua o conteúdo de exemplo abaixo (entre as crases ` `) pela SUA lista CSV.
         let embeddedCsvData = `Numero,Arquivo,Cantor,Musica,TrechoInicial
 1001,arquivo1.mp3,Artista X,Musica Alpha,Comeco da letra A
 1002,arquivo2.mp3,Artista Y,Musica Beta,Comeco da letra B
@@ -155,10 +158,9 @@
 7000,VS7000.mp4,Abba,Dancing Queen,"You can dance, you can jive..."
 7001,VS7001.mp4,Adele,Someone Like You,"I heard that you're settled down..."`;
 
-        const LOCAL_STORAGE_KEY = 'karaokeAppMusicasData'; // Chave para o LocalStorage
+        const LOCAL_STORAGE_KEY = 'karaokeAppMusicasData'; 
 
         document.addEventListener('DOMContentLoaded', () => {
-            // ... (referências a elementos DOM como antes)
             const menuToggle = document.getElementById('menuToggle');
             const sideMenu = document.getElementById('sideMenu');
             const overlay = document.getElementById('overlay');
@@ -177,10 +179,10 @@
 
             const adminPanelModal = document.getElementById('adminPanelModal');
             const jsonDataTextarea = document.getElementById('jsonDataTextarea');
-            const btnSaveChangesAndPersist = document.getElementById('btnSaveChangesAndPersist'); // Novo ID
+            const btnSaveChangesAndPersist = document.getElementById('btnSaveChangesAndPersist'); 
             const btnDownloadJson = document.getElementById('btnDownloadJson');
             const btnReloadMusicListAdmin = document.getElementById('btnReloadMusicListAdmin');
-            const btnResetToDefault = document.getElementById('btnResetToDefault'); // Novo botão
+            const btnResetToDefault = document.getElementById('btnResetToDefault'); 
             const btnCloseAdminPanel = document.getElementById('btnCloseAdminPanel');
             const adminStatusMessage = document.getElementById('adminStatusMessage');
 
@@ -233,8 +235,7 @@
                     try {
                         baseDeMusicas = parseCSV(embeddedCsvData);
                         updateStatus(`Dados padrão carregados (${baseDeMusicas.length} músicas).`, statusCarregamentoEl);
-                        // Salva os dados padrão no LocalStorage para o próximo uso se o parse foi bem sucedido
-                        if (baseDeMusicas.length > 0 || embeddedCsvData.trim().split(/\r?\n/).length <=1 ) { // Salva mesmo se CSV estiver vazio ou só com cabeçalho
+                        if (baseDeMusicas.length > 0 || embeddedCsvData.trim().split(/\r?\n/).length <=1 ) {
                              localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify(baseDeMusicas));
                              updateStatus(`Dados padrão carregados e salvos no armaz. local (${baseDeMusicas.length} músicas).`, statusCarregamentoEl, false, true);
                         } else {
@@ -243,24 +244,22 @@
                     } catch (e) {
                         console.error("Erro ao processar CSV embutido:", e);
                         updateStatus("Erro crítico ao processar CSV padrão.", statusCarregamentoEl, true);
-                        baseDeMusicas = []; // Garante que baseDeMusicas seja um array vazio em caso de erro total
+                        baseDeMusicas = []; 
                     }
                 }
                 refreshCurrentView();
             }
 
-
-            function parseCSV(text) { /* ... (função parseCSV mantida como antes) ... */
+            function parseCSV(text) {
                 const linhas = text.trim().split(/\r?\n/);
                 if (linhas.length < 1) { return []; }
                 if (linhas.length === 1 && linhas[0].trim() === "") return [];
 
                 const cabecalho = linhas[0].split(',').map(header => header.trim());
                 if (cabecalho.length === 0 || (cabecalho.length === 1 && cabecalho[0] === "" && linhas.length === 1)) {
-                     // Se só tiver uma linha vazia ou um cabeçalho vazio, retorna array vazio.
                      if (linhas.length === 1) return [];
                      console.warn("CSV com cabeçalho inválido ou vazio.");
-                     return []; // Ou poderia lançar um erro
+                     return [];
                 }
                 const dados = [];
                 for (let i = 1; i < linhas.length; i++) {
@@ -293,8 +292,7 @@
                 return dados;
             }
 
-
-            function realizarBusca() { /* ... (mantida como antes) ... */
+            function realizarBusca() {
                 if (!areaResultadosPrincipal) return;
                  if (baseDeMusicas.length === 0 && !localStorage.getItem(LOCAL_STORAGE_KEY) && embeddedCsvData.trim() === "") {
                     areaResultadosPrincipal.innerHTML = '<p>Nenhuma música configurada. Adicione dados pelo Painel Admin ou no código HTML.</p>';
@@ -318,7 +316,7 @@
                 exibirResultados(resultadosFiltrados, areaResultadosPrincipal);
             }
 
-            function exibirResultados(resultados, container) { /* ... (mantida como antes) ... */
+            function exibirResultados(resultados, container) {
                  if (!container) return;
                 container.innerHTML = '';
                 if (resultados.length === 0) {
@@ -346,14 +344,14 @@
                 });
             }
 
-            function carregarFavoritosDoLocalStorage() { /* ... (mantida como antes) ... */
-                 const favoritosSalvos = localStorage.getItem('appMusicasFavoritos'); // Chave diferente para favoritos
+            function carregarFavoritosDoLocalStorage() {
+                 const favoritosSalvos = localStorage.getItem('appMusicasFavoritos'); 
                 favoritos = favoritosSalvos ? JSON.parse(favoritosSalvos) : [];
             }
-            function salvarFavoritosNoLocalStorage() { /* ... (mantida como antes) ... */
+            function salvarFavoritosNoLocalStorage() {
                 localStorage.setItem('appMusicasFavoritos', JSON.stringify(favoritos));
             }
-            function toggleFavoritoHandler(event) { /* ... (mantida como antes) ... */
+            function toggleFavoritoHandler(event) {
                 const botao = event.currentTarget;
                 const musicaId = botao.dataset.id;
                 if (!musicaId) return;
@@ -371,7 +369,7 @@
                     exibirTodasAsMusicasFavoritas();
                 }
             }
-            function atualizarStatusBotaoFavorito(botao, musicaId) { /* ... (mantida como antes) ... */
+            function atualizarStatusBotaoFavorito(botao, musicaId) {
                  if (!botao || !musicaId) return;
                 const texto = botao.querySelector('span');
                 if (favoritos.includes(musicaId)) {
@@ -382,7 +380,7 @@
                     if (texto) texto.textContent = 'Favoritar';
                 }
             }
-            function exibirTodasAsMusicasFavoritas() { /* ... (mantida como antes) ... */
+            function exibirTodasAsMusicasFavoritas() {
                  if (!areaResultadosPrincipal) return;
                 areaResultadosPrincipal.innerHTML = '';
 
@@ -414,13 +412,10 @@
             }
 
             function refreshCurrentView() {
-                const activeTab = document.querySelector('.bottom-nav .nav-item.active');
-                if (!activeTab) { // Se nenhuma aba estiver ativa, seleciona a primeira por padrão
-                     if(bottomNavItems.length > 0) bottomNavItems[0].click();
-                     return;
-                }
+                const activeTabLink = document.querySelector('.bottom-nav .nav-item.active');
+                const activeTabId = activeTabLink ? activeTabLink.id : 'navTabMusicas'; // Padrão para 'navTabMusicas' se nada estiver ativo
 
-                if (activeTab.id === 'navTabMusicas') {
+                if (activeTabId === 'navTabMusicas') {
                     if (baseDeMusicas.length === 0 && !localStorage.getItem(LOCAL_STORAGE_KEY) && embeddedCsvData.trim() === "") {
                         areaResultadosPrincipal.innerHTML = '<p>Nenhuma música configurada. Adicione dados no Painel Admin ou no código HTML.</p>';
                     } else if (baseDeMusicas.length === 0) {
@@ -430,16 +425,17 @@
                     } else {
                         areaResultadosPrincipal.innerHTML = '<p>Digite algo para pesquisar...</p>';
                     }
-                } else if (activeTab.id === 'navTabFavoritas') {
+                } else if (activeTabId === 'navTabFavoritas') {
                     exibirTodasAsMusicasFavoritas();
                 } else {
-                    // Trata outras abas se necessário
-                     if (areaResultadosPrincipal) areaResultadosPrincipal.innerHTML = `<h2>${activeTab.querySelector('span').textContent}</h2><p>Conteúdo para ${activeTab.querySelector('span').textContent}...</p>`;
+                     const activeTabSpan = activeTabLink ? activeTabLink.querySelector('span') : null;
+                     const tabName = activeTabSpan ? activeTabSpan.textContent : "Conteúdo";
+                     if (areaResultadosPrincipal) areaResultadosPrincipal.innerHTML = `<h2>${tabName}</h2><p>Conteúdo para ${tabName}...</p>`;
                 }
             }
 
             // --- Lógica do Admin ---
-            if (navAdminLogin) navAdminLogin.addEventListener('click', (e) => { e.preventDefault(); loginModal.style.display = 'block'; loginErrorMessage.textContent = ''; closeMenu(); });
+            if (navAdminLogin) navAdminLogin.addEventListener('click', (e) => { e.preventDefault(); loginModal.style.display = 'block'; loginErrorMessage.textContent = ''; usernameInput.value = ''; passwordInput.value = ''; closeMenu(); }); // Limpa campos ao abrir
             if (btnCloseLoginModal) btnCloseLoginModal.addEventListener('click', () => { loginModal.style.display = 'none'; });
 
             if (btnLogin) {
@@ -476,8 +472,7 @@
             if (btnDownloadJson) {
                 btnDownloadJson.addEventListener('click', () => {
                     try {
-                        // Pega os dados da textarea para garantir que está baixando o que o usuário vê
-                        const dadosParaBaixar = JSON.parse(jsonDataTextarea.value);
+                        const dadosParaBaixar = JSON.parse(jsonDataTextarea.value); 
                         if (!Array.isArray(dadosParaBaixar)){
                              updateStatus('Conteúdo da área de texto não é um JSON Array válido para download.', adminStatusMessage, true);
                              return;
@@ -504,8 +499,8 @@
                     try {
                         const dadosDoPainel = JSON.parse(jsonDataTextarea.value);
                         if (Array.isArray(dadosDoPainel)) {
-                            baseDeMusicas = dadosDoPainel; // Atualiza baseDeMusicas
-                            localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify(baseDeMusicas)); // Salva no LocalStorage também
+                            baseDeMusicas = dadosDoPainel; 
+                            localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify(baseDeMusicas)); 
                             updateStatus(`Dados aplicados (${baseDeMusicas.length} músicas). Recarregando visualização...`, adminStatusMessage, false, true);
                             refreshCurrentView();
                         } else {
@@ -522,9 +517,10 @@
                     if (confirm("Tem certeza que deseja apagar os dados salvos no navegador e restaurar a lista padrão embutida no código?")) {
                         localStorage.removeItem(LOCAL_STORAGE_KEY);
                         updateStatus("Armazenamento local limpo. Recarregando dados padrão...", adminStatusMessage, false, true);
-                        carregarDadosIniciais(); // Recarrega do CSV e salva no LocalStorage
-                        // Atualiza a textarea no painel admin se estiver aberto
-                        if (adminPanelModal.style.display === 'block') {
+                        // Limpa os campos de login também, se desejar, mas não é estritamente necessário aqui
+                        // usernameInput.value = ''; passwordInput.value = ''; 
+                        carregarDadosIniciais(); 
+                        if (adminPanelModal.style.display === 'block') { // Atualiza a textarea se o painel admin estiver aberto
                             jsonDataTextarea.value = JSON.stringify(baseDeMusicas, null, 2);
                         }
                     }
@@ -537,8 +533,8 @@
             }
 
             // --- Inicialização ---
-            carregarFavoritosDoLocalStorage(); // Favoritos são separados
-            carregarDadosIniciais(); // Carrega músicas do LocalStorage ou CSV padrão
+            carregarFavoritosDoLocalStorage(); 
+            carregarDadosIniciais(); 
 
             if (campoBusca) campoBusca.addEventListener('input', () => { clearTimeout(debounceTimer); debounceTimer = setTimeout(realizarBusca, 300); });
 
