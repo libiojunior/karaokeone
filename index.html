@@ -1,0 +1,449 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Buscador de Músicas Karaokê</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css">
+    <style>
+        body { background-color: #000; color: #fff; font-family: Arial, sans-serif; margin: 0; padding: 0; display: flex; flex-direction: column; height: 100vh; }
+        .side-menu { position: fixed; top: 0; left: -280px; width: 280px; height: 100%; background-color: #1c1c1c; padding: 20px; box-sizing: border-box; transition: left 0.3s ease; z-index: 200; display: flex; flex-direction: column; border-right: 1px solid #333; }
+        .side-menu.open { left: 0; }
+        .menu-logo { text-align: center; margin-bottom: 20px; }
+        .menu-logo img { width: 120px; height: 120px; border-radius: 50%; border: 3px solid gold; }
+        .menu-nav ul { list-style: none; padding: 0; margin: 0; }
+        .menu-nav li a { color: #fff; text-decoration: none; padding: 12px 5px; display: block; font-size: 1em; border-bottom: 1px solid #2a2a2a; }
+        .menu-nav li:last-child a { border-bottom: none; }
+        .menu-nav li a:hover { background-color: #333; }
+        .menu-nav li a i.fas { margin-right: 10px; width: 20px; text-align: center; }
+        .menu-footer { margin-top: auto; font-size: 0.8em; text-align: center; color: #ccc; padding-top: 20px; }
+        .overlay { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background-color: rgba(0,0,0,0.5); z-index: 100; }
+        .overlay.show { display: block; }
+        .app-container { flex-grow: 1; display: flex; flex-direction: column; overflow-y: hidden; }
+        .app-header { background-color: #1c1c1c; padding: 15px; display: flex; align-items: center; border-bottom: 1px solid #333; min-height: 50px; box-sizing: border-box; }
+        .menu-toggle-btn { background: none; border: none; color: #fff; font-size: 1.5em; cursor: pointer; padding: 0 10px; }
+        .app-header h1 { font-size: 1.2em; margin: 0; color: #fff; text-align: center; flex-grow: 1; }
+        .header-placeholder-right { width: 40px; }
+        .search-bar-container { padding: 15px; background-color: #000; }
+        .search-input-wrapper { display: flex; align-items: center; background-color: #333; border-radius: 25px; padding: 10px 15px; }
+        .search-input-wrapper i { margin-right: 10px; color: #ccc; }
+        .search-input-wrapper input { flex-grow: 1; background: none; border: none; color: #fff; font-size: 1em; }
+        .search-input-wrapper input::placeholder { color: #ccc; }
+        #updateNotification { display:none; background-color: #ff9800; color: black; padding: 10px; margin:10px 15px; text-align: center; border-radius: 5px; }
+        #btnUpdateNow { margin-left: 10px; padding: 5px 10px; background-color: #000; color: #fff; border:none; border-radius:3px; cursor:pointer; }
+        #statusMessage { padding: 10px; margin: 0 15px 10px 15px; text-align: center; border-radius: 5px; display: none; }
+        #statusMessage.success { background-color: green; color: white; }
+        #statusMessage.error { background-color: red; color: white; }
+        #statusMessage.info { background-color: dodgerblue; color: white; }
+        .results-area { flex-grow: 1; overflow-y: auto; padding: 0 15px 15px 15px; background-color: #000; }
+        .song-item { background-color: #000; padding: 12px 0; margin-bottom: 5px; border-bottom: 1px solid #2a2a2a; }
+        .song-item:last-child { border-bottom: none; }
+        .song-item .song-code { color: #D32F2F; font-size: 0.9em; display: block; margin-bottom: 3px; }
+        .song-item .song-title { font-weight: bold; font-size: 1.1em; color: #fff; margin: 2px 0; }
+        .song-item .song-artist, .song-item .song-snippet { font-size: 0.9em; color: #ccc; margin: 2px 0; }
+        .btn-favoritar { background-color: #555; color: white; border: none; padding: 6px 12px; border-radius: 4px; cursor: pointer; margin-top: 8px; font-size: 0.85em; transition: background-color 0.2s ease; }
+        .btn-favoritar i { margin-right: 5px; }
+        .btn-favoritar.favoritado { background-color: #ffc107; color: #000; }
+        .btn-favoritar .fa-star::before { font-family: "Font Awesome 5 Free"; font-weight: 400; }
+        .btn-favoritar.favoritado .fa-star::before { font-family: "Font Awesome 5 Free"; font-weight: 900; }
+        .bottom-nav { display: flex; justify-content: space-around; background-color: #1c1c1c; padding: 8px 0; border-top: 1px solid #333; }
+        .nav-item { display: flex; flex-direction: column; align-items: center; color: #8e8e93; text-decoration: none; font-size: 0.75em; cursor: pointer; padding: 5px; flex-grow: 1; text-align: center; }
+        .nav-item i { font-size: 1.6em; margin-bottom: 3px; }
+        .nav-item.active { color: #fff; }
+    </style>
+</head>
+<body>
+
+    <input type="file" id="csvFileInput" accept=".csv" style="display: none;">
+
+    <div id="sideMenu" class="side-menu">
+        <div class="menu-logo">
+            <img src="placeholder_logo.png" alt="App Logo"> </div>
+        <nav class="menu-nav">
+            <ul>
+                <li><a href="#" id="navCarregarCSVLocal"><i class="fas fa-file-upload"></i>Carregar CSV (PC)</a></li>
+                <li><a href="#" id="navCarregarCSVURL"><i class="fas fa-link"></i>Carregar CSV (URL)</a></li>
+                <li><a href="#" id="navInicio"><i class="fas fa-home"></i>Início</a></li>
+                <li><a href="#" id="navListaMusicas"><i class="fas fa-list-ul"></i>Lista de Músicas</a></li>
+                <li><a href="#" id="navMinhasFavoritas"><i class="fas fa-star"></i>Minhas Favoritas</a></li>
+                <li><a href="#" id="navCatalogo"><i class="fas fa-book-open"></i>Catálogo</a></li>
+                <li><a href="#" id="navContatoMenu"><i class="fas fa-id-card"></i>Contato</a></li>
+                <li><a href="#" id="navPolitica"><i class="fas fa-shield-alt"></i>Política de Privacidade</a></li>
+            </ul>
+        </nav>
+        <div class="menu-footer">
+            <p>2025 © Equipe 360 RJ</p> 
+            <p>BusKaraokê Ver.: 1.3</p> 
+        </div>
+    </div>
+    <div id="overlay" class="overlay"></div>
+
+    <div class="app-container">
+        <header class="app-header">
+            <button id="menuToggle" class="menu-toggle-btn"><i class="fas fa-bars"></i></button>
+            <h1>Músicas</h1>
+            <div class="header-placeholder-right"></div>
+        </header>
+
+        <div class="search-bar-container">
+            <div class="search-input-wrapper">
+                <i class="fas fa-search"></i>
+                <input type="text" id="campoBusca" placeholder="Pesquisar música, artista ou código...">
+            </div>
+        </div>
+        
+        <div id="updateNotification">
+             Uma atualização para a lista de músicas está disponível!
+             <button id="btnUpdateNow">Atualizar Agora</button>
+        </div>
+        <div id="statusMessage"></div>
+
+        <main id="areaResultados" class="results-area">
+            <p>Carregando dados iniciais...</p>
+        </main>
+
+        <nav class="bottom-nav">
+            <a href="#" class="nav-item active" id="navTabMusicas"><i class="fas fa-music"></i><span>Músicas</span></a>
+            <a href="#" class="nav-item" id="navTabFavoritas"><i class="fas fa-star"></i><span>Favoritas</span></a>
+            <a href="#" class="nav-item" id="navTabProdutos"><i class="fas fa-shopping-bag"></i><span>Produtos</span></a>
+            <a href="#" class="nav-item" id="navTabCompartilhe"><i class="fas fa-share-alt"></i><span>Compartilhe</span></a>
+            <a href="#" class="nav-item" id="navTabContato"><i class="fas fa-phone"></i><span>Contato</span></a>
+        </nav>
+    </div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            const menuToggle = document.getElementById('menuToggle');
+            const sideMenu = document.getElementById('sideMenu');
+            const overlay = document.getElementById('overlay');
+            const campoBusca = document.getElementById('campoBusca');
+            const areaResultadosPrincipal = document.getElementById('areaResultados');
+            const bottomNavItems = document.querySelectorAll('.bottom-nav .nav-item');
+            const csvFileInput = document.getElementById('csvFileInput');
+            const navCarregarCSVLocal = document.getElementById('navCarregarCSVLocal');
+            const navCarregarCSVURL = document.getElementById('navCarregarCSVURL');
+            const statusMessageDiv = document.getElementById('statusMessage');
+            const updateNotificationDiv = document.getElementById('updateNotification');
+            const btnUpdateNow = document.getElementById('btnUpdateNow');
+
+            // --- URLs para carregar dados do GitHub ---
+            // Base URL para o conteúdo RAW do seu repositório e branch específicos
+            const GITHUB_RAW_BASE_URL = 'https://raw.githubusercontent.com/equipe360rj/buskaraoke/refs/heads/main/BD.csv';
+            // URL completa para o arquivo BD.csv RAW (ATENÇÃO AO NOME DO ARQUIVO SE FOR DIFERENTE DE 'BD.csv')
+            // A URL que você forneceu https://raw.githubusercontent.com/equipe360rj/buskaraoke/refs/heads/main/BD.csv também deve funcionar,
+            // mas a forma abaixo é a mais comum para o branch 'main'. Use a que funcionar consistentemente para você.
+            const REMOTE_CSV_URL = 'https://raw.githubusercontent.com/equipe360rj/buskaraoke/refs/heads/main/BD.csv'; 
+            // URL completa para o arquivo version.json RAW (ATENÇÃO AO NOME DO ARQUIVO SE FOR DIFERENTE DE 'version.json')
+            const REMOTE_VERSION_URL = GITHUB_RAW_BASE_URL + 'https://raw.githubusercontent.com/equipe360rj/buskaraoke/refs/heads/main/dados.json'; 
+            
+            const LOCAL_TIMESTAMP_KEY = 'appBusKaraoke_csv_timestamp';
+
+            let baseDeMusicas = [];
+            let favoritos = [];
+            let debounceTimer;
+
+            function exibirStatus(mensagem, tipo = 'info') {
+                statusMessageDiv.textContent = mensagem;
+                statusMessageDiv.className = tipo;
+                statusMessageDiv.style.display = 'block';
+                setTimeout(() => { statusMessageDiv.style.display = 'none'; }, 5000);
+            }
+
+            function openMenu() { sideMenu.classList.add('open'); overlay.classList.add('show'); }
+            function closeMenu() { sideMenu.classList.remove('open'); overlay.classList.remove('show'); }
+
+            if (menuToggle) menuToggle.addEventListener('click', (event) => { event.stopPropagation(); if (sideMenu.classList.contains('open')) closeMenu(); else openMenu(); });
+            if (overlay) overlay.addEventListener('click', closeMenu);
+            
+            sideMenu.querySelectorAll('.menu-nav a').forEach(link => {
+                link.addEventListener('click', (e) => {
+                    const linkId = e.currentTarget.id;
+                    if (linkId !== 'navCarregarCSVLocal' && linkId !== 'navCarregarCSVURL') {
+                        console.log("Menu item (não carregamento) clicked:", linkId);
+                        closeMenu();
+                    }
+                });
+            });
+            window.addEventListener('keydown', (event) => { if (event.key === 'Escape' && sideMenu.classList.contains('open')) closeMenu(); });
+
+            async function loadAndProcessRemoteCSV(timestampToStore, sourceDescription) {
+                console.log(`Iniciando loadAndProcessRemoteCSV para: ${sourceDescription} de ${REMOTE_CSV_URL}`);
+                exibirStatus(`Carregando ${sourceDescription}...`, 'info');
+                try {
+                    const dataResponse = await fetch(REMOTE_CSV_URL + '?t=' + new Date().getTime());
+                    if (!dataResponse.ok) throw new Error(`Erro HTTP ${dataResponse.status} ao buscar ${REMOTE_CSV_URL}`);
+                    const csvText = await dataResponse.text();
+                    processarConteudoCSV(csvText, sourceDescription, timestampToStore);
+                } catch (error) {
+                    console.error(`Falha ao carregar CSV de ${REMOTE_CSV_URL} (${sourceDescription}):`, error);
+                    exibirStatus(`Erro ao carregar ${sourceDescription}. Verifique console.`, 'error');
+                    if (areaResultadosPrincipal) areaResultadosPrincipal.innerHTML = `<p>Não foi possível carregar: ${sourceDescription}.</p>`;
+                }
+            }
+
+            async function checkForUpdatesAndLoadInitialData() {
+                console.log("Verificando atualizações e carregando dados iniciais...");
+                try {
+                    const versionResponse = await fetch(REMOTE_VERSION_URL + '?t=' + new Date().getTime());
+                    if (!versionResponse.ok) {
+                        console.warn(`Não foi possível buscar ${REMOTE_VERSION_URL} (status ${versionResponse.status}). Carregando CSV da URL padrão sem verificação de versão.`);
+                        exibirStatus("Aviso: Não foi possível verificar a versão. Tentando carregar dados...", "info");
+                        await loadAndProcessRemoteCSV(null, "dados da nuvem (sem info de versão)");
+                        return;
+                    }
+
+                    const remoteVersionData = await versionResponse.json();
+                    const remoteTimestamp = remoteVersionData.timestamp;
+                    const localTimestamp = localStorage.getItem(LOCAL_TIMESTAMP_KEY);
+                    console.log("Timestamp Local:", localTimestamp, "| Timestamp Remoto:", remoteTimestamp);
+
+                    if (remoteTimestamp && (!localTimestamp || new Date(remoteTimestamp) > new Date(localTimestamp))) {
+                        console.log("Atualização disponível ou primeira carga com versão remota.");
+                        if (updateNotificationDiv && btnUpdateNow) {
+                            updateNotificationDiv.style.display = 'block';
+                            btnUpdateNow.onclick = () => {
+                                updateNotificationDiv.style.display = 'none';
+                                exibirStatus("Atualizando base de dados da nuvem...", "info");
+                                loadAndProcessRemoteCSV(remoteTimestamp, `atualização (versão ${new Date(remoteTimestamp).toLocaleString()})`);
+                            };
+                        }
+                        if (!localTimestamp) {
+                            await loadAndProcessRemoteCSV(remoteTimestamp, `dados iniciais da nuvem (versão ${new Date(remoteTimestamp).toLocaleString()})`);
+                        } else {
+                             console.log("Carregando dados (possivelmente desatualizados) enquanto a notificação é exibida.");
+                             await loadAndProcessRemoteCSV(null, `dados da nuvem (local ${new Date(localTimestamp).toLocaleString()}, remoto ${new Date(remoteTimestamp).toLocaleString()})`);
+                        }
+                    } else {
+                        console.log("Dados estão atualizados ou versão remota não é mais nova.");
+                        await loadAndProcessRemoteCSV(remoteTimestamp, `dados da nuvem (versão ${new Date(remoteTimestamp).toLocaleString()})`);
+                    }
+                } catch (error) {
+                    console.error("Erro crítico ao verificar/carregar dados iniciais:", error);
+                    exibirStatus("Erro ao conectar para buscar músicas. Verifique sua conexão e as URLs configuradas.", "error");
+                    if(areaResultadosPrincipal) areaResultadosPrincipal.innerHTML = "<p>Falha crítica ao carregar base de dados.</p>";
+                }
+            }
+            
+            function parseCSV(text) {
+                console.log("Iniciando parse do CSV...");
+                const linhas = text.trim().split(/\r?\n/);
+                if (linhas.length === 0) { // Mudança: Se não há linhas, retorna vazio
+                    console.warn("CSV vazio. Nenhuma linha para processar."); 
+                    return []; 
+                }
+                const cabecalhoOriginal = linhas[0].split(',');
+                const cabecalho = cabecalhoOriginal.map(header => header.trim().replace(/"/g, '')); // Remove aspas do cabeçalho
+                console.log("Cabeçalho detectado (original):", cabecalhoOriginal);
+                console.log("Cabeçalho processado:", cabecalho);
+
+                if (linhas.length <= 1 && cabecalho.every(h => h === '')) { // Se só tem cabeçalho e ele está vazio ou é lixo de planilha vazia
+                    console.warn("CSV contém apenas cabeçalho vazio ou inválido.");
+                    return [];
+                }
+                 if (linhas.length <= 1) {
+                    console.warn("CSV contém apenas cabeçalho ou está vazio após o cabeçalho.");
+                    return [];
+                }
+
+
+                const dados = [];
+                for (let i = 1; i < linhas.length; i++) {
+                    const linhaAtual = linhas[i];
+                    if (!linhaAtual.trim()) continue;
+                    const valores = [];
+                    let valorAtual = '';
+                    let dentroDeAspas = false;
+                    for (let char of linhaAtual) {
+                        if (char === '"' && (valorAtual.length === 0 || valorAtual[valorAtual.length-1] !== '\\')) { dentroDeAspas = !dentroDeAspas; }
+                        else if (char === ',' && !dentroDeAspas) { valores.push(valorAtual.trim()); valorAtual = ''; }
+                        else { valorAtual += char; }
+                    }
+                    valores.push(valorAtual.trim());
+                    if (valores.length === cabecalho.length) {
+                        const musica = {};
+                        for (let j = 0; j < cabecalho.length; j++) {
+                            let valor = valores[j];
+                            if (valor.startsWith('"') && valor.endsWith('"')) valor = valor.substring(1, valor.length - 1).replace(/""/g, '"');
+                            // Usa o nome do cabeçalho processado (sem aspas) como chave
+                            musica[cabecalho[j]] = valor; 
+                        }
+                        dados.push(musica);
+                    } else { console.warn(`Linha CSV ignorada (colunas ${valores.length} não batem com cabeçalho ${cabecalho.length}):`, linhaAtual); }
+                }
+                console.log("Parse do CSV concluído. Itens:", dados.length);
+                if(dados.length > 0) console.log("Exemplo de primeiro item parseado:", dados[0]);
+                return dados;
+            }
+
+            function processarConteudoCSV(csvText, sourceDescription = "nova base", timestampParaArmazenar = null) {
+                console.log(`Processando conteúdo CSV de ${sourceDescription}`);
+                const novaBase = parseCSV(csvText);
+                if (novaBase.length > 0) {
+                    baseDeMusicas = novaBase;
+                    console.log(`${sourceDescription} carregada. Itens: ${baseDeMusicas.length}. Primeiro item:`, baseDeMusicas.length > 0 ? baseDeMusicas[0] : 'N/A');
+                    exibirStatus(`${sourceDescription} carregada com ${baseDeMusicas.length} músicas.`, 'success');
+                    if (timestampParaArmazenar) {
+                        localStorage.setItem(LOCAL_TIMESTAMP_KEY, timestampParaArmazenar);
+                        console.log("Timestamp local atualizado para:", timestampParaArmazenar);
+                    }
+                    if (campoBusca) campoBusca.value = '';
+                    const abaAtiva = document.querySelector('.bottom-nav .nav-item.active');
+                    if (abaAtiva && abaAtiva.id === 'navTabMusicas' && areaResultadosPrincipal) {
+                        areaResultadosPrincipal.innerHTML = '<p>Base de dados atualizada. Digite para pesquisar.</p>';
+                    } else if (abaAtiva && abaAtiva.id === 'navTabFavoritas') {
+                        exibirTodasAsMusicasFavoritas();
+                    }
+                } else {
+                    console.warn(`Nenhum dado válido encontrado em ${sourceDescription}. Base de músicas não alterada.`);
+                    exibirStatus(`Nenhum dado válido encontrado em ${sourceDescription}. Verifique o formato do CSV.`, 'error');
+                }
+            }
+
+            function realizarBusca() {
+                console.log("--- Função realizarBusca() CHAMADA ---");
+                if (!areaResultadosPrincipal) { console.error("areaResultadosPrincipal é NULO em realizarBusca!"); return; }
+                const termo = campoBusca.value.toLowerCase().trim();
+                console.log("Termo da busca:", termo, "| Total de músicas na base:", baseDeMusicas.length);
+
+                if (baseDeMusicas.length === 0 && termo !== "") {
+                    areaResultadosPrincipal.innerHTML = '<p>A base de músicas está vazia. Verifique o carregamento do CSV.</p>';
+                    return;
+                }
+                if (!termo) { areaResultadosPrincipal.innerHTML = '<p>Digite algo para pesquisar...</p>'; return; }
+
+                const resultadosFiltrados = baseDeMusicas.filter(musica => {
+                    // Certifique-se que 'Numero', 'Cantor', 'Musica' SÃO OS NOMES EXATOS DAS COLUNAS no seu CSV (após parse)
+                    const numero = String(musica.Numero || musica.numero || musica.NÚMERO || '').toLowerCase(); // Tenta algumas variações comuns
+                    const cantor = String(musica.Cantor || musica.cantor || musica.ARTISTA || '').toLowerCase();
+                    const titulo = String(musica.Musica || musica.musica || musica.MÚSICA || musica.TITULO || musica.TÍTULO || '').toLowerCase();
+                    return numero.includes(termo) || cantor.includes(termo) || titulo.includes(termo);
+                });
+                console.log("Resultados filtrados:", resultadosFiltrados.length, "itens.", resultadosFiltrados.length > 0 ? resultadosFiltrados[0] : '(nenhum)');
+                exibirResultados(resultadosFiltrados, areaResultadosPrincipal);
+            }
+
+            function exibirResultados(resultados, container) {
+                console.log("--- Função exibirResultados() CHAMADA com", resultados.length, "resultados ---");
+                if (!container) { console.error("Container (para exibir resultados) é NULO!"); return; }
+                container.innerHTML = '';
+                if (resultados.length === 0) { container.innerHTML = '<p>Nenhum resultado encontrado.</p>'; return; }
+                resultados.forEach(musica => {
+                    const itemDiv = document.createElement('div');
+                    itemDiv.className = 'song-item';
+                    // Adapte os nomes das propriedades aqui para corresponderem EXATAMENTE aos do seu CSV
+                    const numeroMusica = musica.Numero || musica.numero || musica.NÚMERO || 'N/D';
+                    const tituloMusica = musica.Musica || musica.musica || musica.MÚSICA || musica.TITULO || musica.TÍTULO || 'Título Desconhecido';
+                    const cantorMusica = musica.Cantor || musica.cantor || musica.ARTISTA || 'Artista Desconhecido';
+                    const trechoMusica = musica.TrechoInicial || musica.trecho || 'Trecho não disponível...';
+                    const idUnico = numeroMusica !== 'N/D' ? numeroMusica : tituloMusica + cantorMusica;
+
+                    itemDiv.innerHTML = `
+                        <span class="song-code">${numeroMusica}</span>
+                        <h3 class="song-title">${tituloMusica}</h3>
+                        <p class="song-artist">${cantorMusica}</p>
+                        <p class="song-snippet">${trechoMusica}</p>
+                        <button class="btn-favoritar" data-id="${idUnico}">
+                            <i class="fas fa-star"></i> <span>Favoritar</span>
+                        </button>
+                    `;
+                    container.appendChild(itemDiv);
+                });
+                container.querySelectorAll('.btn-favoritar').forEach(btn => {
+                    btn.addEventListener('click', toggleFavoritoHandler);
+                    atualizarStatusBotaoFavorito(btn, btn.dataset.id);
+                });
+            }
+
+            function carregarFavoritosDoLocalStorage() { favoritos = JSON.parse(localStorage.getItem('appMusicasFavoritos')) || []; }
+            function salvarFavoritosNoLocalStorage() { localStorage.setItem('appMusicasFavoritos', JSON.stringify(favoritos)); }
+            function toggleFavoritoHandler(event) {
+                const botao = event.currentTarget; const musicaId = botao.dataset.id; if (!musicaId) return;
+                const index = favoritos.indexOf(musicaId);
+                if (index > -1) favoritos.splice(index, 1); else favoritos.push(musicaId);
+                salvarFavoritosNoLocalStorage();
+                atualizarStatusBotaoFavorito(botao, musicaId);
+                if (document.querySelector('.bottom-nav .nav-item.active').id === 'navTabFavoritas') exibirTodasAsMusicasFavoritas();
+            }
+            function atualizarStatusBotaoFavorito(botao, musicaId) {
+                if (!botao || !musicaId) return; const texto = botao.querySelector('span');
+                if (favoritos.includes(musicaId)) { botao.classList.add('favoritado'); if (texto) texto.textContent = 'Desfavoritar'; }
+                else { botao.classList.remove('favoritado'); if (texto) texto.textContent = 'Favoritar'; }
+            }
+            function exibirTodasAsMusicasFavoritas() {
+                if (!areaResultadosPrincipal) return;
+                areaResultadosPrincipal.innerHTML = '<h2>Minhas Favoritas</h2>';
+                if (favoritos.length === 0) { areaResultadosPrincipal.innerHTML += '<p>Nenhuma música favorita.</p>'; return; }
+                const musicasFavoritasVisiveis = baseDeMusicas.filter(musica => {
+                    const idMusica = String(musica.Numero || musica.numero || musica.NÚMERO || musica.Musica || musica.musica || musica.MÚSICA || musica.TITULO || musica.TÍTULO);
+                    return favoritos.includes(idMusica);
+                });
+                if (musicasFavoritasVisiveis.length === 0 && favoritos.length > 0) { areaResultadosPrincipal.innerHTML += '<p>Músicas favoritas não encontradas na base de dados atual.</p>'; return; }
+                exibirResultados(musicasFavoritasVisiveis, areaResultadosPrincipal);
+            }
+
+            if (navCarregarCSVLocal && csvFileInput) {
+                navCarregarCSVLocal.addEventListener('click', (e) => { e.preventDefault(); csvFileInput.click(); closeMenu(); });
+                csvFileInput.addEventListener('change', (event) => {
+                    const file = event.target.files[0];
+                    if (file) {
+                        exibirStatus(`Carregando ${file.name}...`, 'info');
+                        const reader = new FileReader();
+                        reader.onload = (e) => { processarConteudoCSV(e.target.result, `arquivo local '${file.name}'`, null); };
+                        reader.onerror = () => { exibirStatus(`Erro ao ler ${file.name}.`, 'error'); };
+                        reader.readAsText(file);
+                    }
+                    event.target.value = null;
+                });
+            }
+
+            if (navCarregarCSVURL) {
+                navCarregarCSVURL.addEventListener('click', async (e) => {
+                    e.preventDefault(); closeMenu(); 
+                    const url = prompt("Digite a URL completa do arquivo CSV (deve permitir CORS):");
+                    if (url) {
+                        exibirStatus(`Carregando CSV de ${url}...`, 'info');
+                        try {
+                            const response = await fetch(url + (url.includes('?') ? '&' : '?') + 't=' + new Date().getTime()); // Cache bust
+                            if (!response.ok) throw new Error(`Erro HTTP: ${response.status}`);
+                            const csvText = await response.text();
+                            processarConteudoCSV(csvText, `URL '${url}'`, null);
+                        } catch (error) { exibirStatus(`Erro ao carregar CSV da URL: ${error.message}`, 'error');}
+                    }
+                });
+            }
+
+            carregarFavoritosDoLocalStorage();
+            checkForUpdatesAndLoadInitialData().then(() => {
+                if (campoBusca) {
+                    console.log("Configurando listener para o campoBusca.");
+                    campoBusca.addEventListener('input', () => {
+                        console.log("Evento 'input' no campoBusca. Valor:", campoBusca.value);
+                        clearTimeout(debounceTimer);
+                        debounceTimer = setTimeout(realizarBusca, 300);
+                    });
+                } else { console.error("Elemento campoBusca NÃO encontrado."); }
+                const abaMusicas = document.getElementById('navTabMusicas');
+                if (abaMusicas && abaMusicas.classList.contains('active') && areaResultadosPrincipal && areaResultadosPrincipal.innerHTML.includes('Carregando dados iniciais...')) {
+                   areaResultadosPrincipal.innerHTML = '<p>Digite algo para pesquisar...</p>';
+                }
+            }).catch(err => { console.error("Erro fatal na inicialização:", err); if(areaResultadosPrincipal) areaResultadosPrincipal.innerHTML = "<p>Falha crítica ao iniciar.</p>"; });
+
+            bottomNavItems.forEach(item => {
+                item.addEventListener('click', function(e) { 
+                    e.preventDefault(); bottomNavItems.forEach(i => i.classList.remove('active')); this.classList.add('active');
+                    const tabId = this.id; if (campoBusca) campoBusca.value = '';
+                    if (tabId === 'navTabMusicas') {
+                         if (areaResultadosPrincipal) areaResultadosPrincipal.innerHTML = '<p>Digite algo para pesquisar...</p>';
+                         if (baseDeMusicas.length === 0 && 
+                             !REMOTE_BASE_URL.includes('equipe360rj') && 
+                             !REMOTE_CSV_URL.includes('https://raw.githubusercontent.com/equipe360rj/buskaraoke/refs/heads/main/BD.csv')) { 
+                            checkForUpdatesAndLoadInitialData(); 
+                        }
+                    } else if (tabId === 'navTabFavoritas') { exibirTodasAsMusicasFavoritas();
+                    } else { if (areaResultadosPrincipal) areaResultadosPrincipal.innerHTML = `<h2>${this.querySelector('span').textContent}</h2><p>Conteúdo para ${this.querySelector('span').textContent}...</p>`; }
+                });
+            });
+        });
+    </script>
+</body>
+</html>
